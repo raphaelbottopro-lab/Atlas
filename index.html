@@ -213,6 +213,29 @@ const DEFDIST={'1 km':1,'5 km':5,'10 km':10,'Semi':21.1,'Marathon':42.2};
 (state.records||[]).forEach(r=>{ if(r.dist==null)r.dist=DEFDIST[r.label]??(r.min?Math.round(r.min*1.02*10)/10:5); delete r.min; delete r.max; });
 const DEFPICTO={e_dc:'bench',e_di:'incline',e_dm:'ohp',e_el:'lateral',e_dips:'dips',e_tri:'triceps',e_trac:'pullup',e_row:'row',e_tir:'pulldown',e_curl:'curl',e_fp:'facepull',e_sq:'squat',e_pr:'legpress',e_fen:'lunge',e_sdt:'rdl',e_mol:'calf',e_ab:'crunch',e_gain:'plank'};
 (state.exos||[]).forEach(e=>{ if(e.picto===undefined)e.picto=DEFPICTO[e.id]||null; });
+const NEWEXOS=[
+ {id:'e_ecarte',name:'Écarté poulie basse',zone:'pecs',cat:'push',sets:4,reps:'12-15',desc:'Rapprocher les mains en contractant les pecs, omoplates en arrière.',picto:'cablefly'},
+ {id:'e_pecfly',name:'Pecfly',zone:'pecs',cat:'push',sets:2,reps:'40 s',desc:'Mains légèrement sous les épaules, mouvement contrôlé.',picto:'pecfly'},
+ {id:'e_tirh',name:'Tirage horizontal',zone:'dos',cat:'pull',sets:3,reps:'8',desc:'Ramener la poulie vers la poitrine, dos légèrement cambré.',picto:'row'},
+ {id:'e_tirhu',name:'Tirage horizontal unilatéral',zone:'dos',cat:'pull',sets:3,reps:'8-10',desc:'Toutes les reps d\u2019un bras puis alterner.',picto:'row'},
+ {id:'e_pull',name:'Pull over poulie haute',zone:'dos',cat:'pull',sets:4,reps:'10-12',desc:'Omoplates en arrière, buste penché, mouvement contrôlé.',picto:'pulldown'},
+ {id:'e_shrug',name:'Shrug',zone:'dos',cat:'pull',sets:4,reps:'15',desc:'Haussements d\u2019épaules, haltères le long du corps, sans bouger coudes ni poignets.',picto:'shrug'},
+ {id:'e_elp',name:'Élévation latérale poulie basse',zone:'epaules',cat:'push',sets:4,reps:'10-12',desc:'Poids léger, ne pas monter trop haut pour ne pas engager les trapèzes.',picto:'lateral'},
+ {id:'e_ois',name:'Oiseau vis-à-vis poulie',zone:'epaules',cat:'pull',sets:4,reps:'10-12',desc:'Mouvement contrôlé, contraction forte en fin de mouvement.',picto:'revfly'},
+ {id:'e_bf',name:'Barre au front',zone:'bras',cat:'push',sets:3,reps:'10',desc:'Épaules fixes, seule l\u2019articulation du coude travaille.',picto:'skull'},
+ {id:'e_extc',name:'Extension triceps corde',zone:'bras',cat:'push',sets:4,reps:'10-12',desc:'Corps légèrement penché, contrôler la remontée.',picto:'triceps'},
+ {id:'e_cm',name:'Curl marteau',zone:'bras',cat:'pull',sets:4,reps:'8',desc:'Prise neutre, garder une tension continue sur le biceps.',picto:'curl'},
+ {id:'e_cmac',name:'Curl machine',zone:'bras',cat:'pull',sets:3,reps:'8',desc:'Prise supination, léger flex au coude en fin de mouvement.',picto:'curl'},
+ {id:'e_cbi',name:'Curl biceps banc incliné',zone:'bras',cat:'pull',sets:3,reps:'8-10',desc:'Banc incliné 30-45°, bon étirement en bas du mouvement.',picto:'curl'},
+ {id:'e_lext',name:'Leg extension',zone:'jambes',cat:'legs',sets:4,reps:'10',desc:'Rester contracté en haut du mouvement, retenir la descente.',picto:'legext'},
+ {id:'e_lcurl',name:'Leg curl assis',zone:'jambes',cat:'legs',sets:4,reps:'10',desc:'Focus ischios : montée explosive, descente retenue.',picto:'legcurl'},
+ {id:'e_add',name:'Adducteurs machine',zone:'jambes',cat:'legs',sets:3,reps:'8-10',desc:'Mouvement lent et contrôlé. Bien s\u2019échauffer avant !',picto:'adductor'},
+ {id:'e_abd',name:'Hip abducteur',zone:'jambes',cat:'legs',sets:4,reps:'10',desc:'Écarter les jambes lentement, cible le fessier latéral.',picto:'abductor'},
+ {id:'e_fb',name:'Fentes bulgares',zone:'jambes',cat:'legs',sets:3,reps:'8',desc:'Pied arrière sur un banc, genou avant à ~90° en position basse.',picto:'lunge'},
+];
+NEWEXOS.forEach(x=>{ if(!(state.exos||[]).find(e=>e.id===x.id))state.exos.push(x); });
+const PICTOFIX={e_ecarte:'cablefly',e_pecfly:'pecfly',e_shrug:'shrug',e_ois:'revfly',e_bf:'skull',e_lext:'legext',e_lcurl:'legcurl',e_add:'adductor',e_abd:'abductor'};
+(state.exos||[]).forEach(e=>{ if(!e.picto&&PICTOFIX[e.id])e.picto=PICTOFIX[e.id]; });
 save();
 
 /* ============ UTILS ============ */
@@ -268,7 +291,7 @@ function zoneSVG(zone,color,size=52){
 }
 
 /* ============ PICTOGRAMMES DE MOUVEMENT ============ */
-const PICTOS={bench:'Développé couché',incline:'Développé incliné',ohp:'Développé debout',lateral:'Élévations latérales',dips:'Dips',triceps:'Extension poulie',pullup:'Tractions',row:'Rowing penché',pulldown:'Tirage vertical',curl:'Curl',facepull:'Face pull',squat:'Squat',legpress:'Presse à cuisses',lunge:'Fente',rdl:'Soulevé de terre',calf:'Mollets',crunch:'Crunch',plank:'Gainage',gen:'Haltère (générique)'};
+const PICTOS={bench:'Développé couché',incline:'Développé incliné',ohp:'Développé debout',lateral:'Élévations latérales',dips:'Dips',triceps:'Extension poulie',pullup:'Tractions',row:'Rowing penché',pulldown:'Tirage vertical',curl:'Curl',facepull:'Face pull',squat:'Squat',legpress:'Presse à cuisses',lunge:'Fente',rdl:'Soulevé de terre',calf:'Mollets',crunch:'Crunch',plank:'Gainage',cablefly:'Écarté poulie',pecfly:'Pecfly machine',shrug:'Shrug',revfly:'Oiseau poulie',skull:'Barre au front',legext:'Leg extension',legcurl:'Leg curl assis',adductor:'Adducteurs',abductor:'Abducteurs',gen:'Haltère (générique)'};
 function moveSVG(p,color,size=46){
   const B=`stroke="${color}" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" fill="none"`;
   const H=(x,y)=>`<circle cx="${x}" cy="${y}" r="4" fill="${color}"/>`;
@@ -293,6 +316,15 @@ function moveSVG(p,color,size=46){
   calf:`<path d="M20 52h22" stroke="var(--sil)" stroke-width="4" stroke-linecap="round"/>${H(31,11)}<path d="M31 15v23M31 38l-4 8 3 4M31 38l5 8-2 4" ${B}/><path d="M52 36V24M48 29l4-6 4 6" stroke="${color}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`,
   crunch:`<path d="M8 54h48" stroke="var(--sil)" stroke-width="3" stroke-linecap="round"/>${H(16,38)}<path d="M20 41l13 7" ${B}/><path d="M33 48l9-11 6 16" ${B}/><path d="M22 41l7-5" ${B}/>`,
   plank:`<path d="M8 54h48" stroke="var(--sil)" stroke-width="3" stroke-linecap="round"/>${H(14,37)}<path d="M19 40l27 5 8 8" ${B}/><path d="M19 41l-3 12M22 41l1 12" ${B}/>`,
+  cablefly:`${G}${H(32,14)}<path d="M32 18v22M32 40l-6 16M32 40l6 16" ${B}/><path d="M32 24l-11 7M32 24l11 7" ${B}/><circle cx="8" cy="50" r="2.6" fill="var(--sub)"/><circle cx="56" cy="50" r="2.6" fill="var(--sub)"/><path d="M10 48l11-16M54 48l-11-16" stroke="var(--sub)" stroke-width="2.2" stroke-dasharray="3 3" fill="none"/>`,
+  pecfly:`<path d="M18 14v26" stroke="var(--sil)" stroke-width="5" stroke-linecap="round"/><path d="M14 40h16M22 40v14" stroke="var(--sil)" stroke-width="3" stroke-linecap="round"/>${H(24,15)}<path d="M23 19l1 19M24 38l10 3 4 12" ${B}/><path d="M23 24h19M23 30l17-3" ${B}/><path d="M46 18v14" stroke="var(--tx)" stroke-width="3.6" stroke-linecap="round"/>`,
+  shrug:`${G}${H(32,13)}<path d="M32 17v23M32 40l-6 16M32 40l6 16" ${B}/><path d="M32 22l-6 4-1 13M32 22l6 4 1 13" ${B}/><path d="M21 40h9M34 40h9" stroke="var(--tx)" stroke-width="3.4" stroke-linecap="round"/><path d="M13 28v-8M10 23l3-4 3 4M51 28v-8M48 23l3-4 3 4" stroke="${color}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`,
+  revfly:`${G}${H(32,15)}<path d="M32 19v21M32 40l-6 16M32 40l6 16" ${B}/><path d="M32 25H15M32 25h17" ${B}/><circle cx="7" cy="9" r="2.6" fill="var(--sub)"/><circle cx="57" cy="9" r="2.6" fill="var(--sub)"/><path d="M9 11l26 13M55 11L29 24" stroke="var(--sub)" stroke-width="2.2" stroke-dasharray="3 3" fill="none"/>`,
+  skull:`<rect x="10" y="42" width="42" height="5" rx="2.5" fill="var(--sil)"/><path d="M14 47v8M48 47v8" stroke="var(--sil)" stroke-width="3" stroke-linecap="round"/>${H(16,37)}<path d="M21 39H44M44 39l9 5" ${B}/><path d="M29 38V25l-8-6" ${B}/>${bar(15,16,26,20)}`,
+  legext:`<path d="M14 34h22M16 34V15M34 36v18M12 54h30" stroke="var(--sil)" stroke-width="3" stroke-linecap="round" fill="none"/>${H(22,13)}<path d="M22 17l2 17" ${B}/><path d="M24 34l14 1 12-9" ${B}/><path d="M47 20l6 7" stroke="var(--tx)" stroke-width="3.4" stroke-linecap="round"/>`,
+  legcurl:`<path d="M14 34h22M16 34V15M34 36v18M12 54h30" stroke="var(--sil)" stroke-width="3" stroke-linecap="round" fill="none"/>${H(22,13)}<path d="M22 17l2 17" ${B}/><path d="M24 34l16 0 4 15" ${B}/><path d="M39 50h10" stroke="var(--tx)" stroke-width="3.4" stroke-linecap="round"/>`,
+  adductor:`<path d="M20 56h24" stroke="var(--sil)" stroke-width="3" stroke-linecap="round"/>${H(32,12)}<path d="M32 16v15" ${B}/><path d="M32 31l-12 12v13M32 31l12 12v13" ${B}/><path d="M26 37v10M38 37v10" stroke="var(--tx)" stroke-width="3.4" stroke-linecap="round"/><path d="M8 44h7M13 41l3 3-3 3M56 44h-7M51 41l-3 3 3 3" stroke="${color}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`,
+  abductor:`<path d="M20 56h24" stroke="var(--sil)" stroke-width="3" stroke-linecap="round"/>${H(32,12)}<path d="M32 16v15" ${B}/><path d="M32 31l-12 12v13M32 31l12 12v13" ${B}/><path d="M17 38v10M47 38v10" stroke="var(--tx)" stroke-width="3.4" stroke-linecap="round"/><path d="M13 44H6M8 41l-3 3 3 3M51 44h7M56 41l3 3-3 3" stroke="${color}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`,
   gen:`<path d="M22 32h20" stroke="${color}" stroke-width="4" stroke-linecap="round"/><path d="M18 21v22M46 21v22" stroke="var(--tx)" stroke-width="5" stroke-linecap="round"/><path d="M11 26v12M53 26v12" stroke="var(--tx)" stroke-width="4" stroke-linecap="round"/>`
   };
   return `<svg width="${size}" height="${size}" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">${D[p]||D.gen}</svg>`;
@@ -617,19 +649,45 @@ $('#ocrFile')?.addEventListener('change',async e=>{
         s.onload=res;s.onerror=()=>rej(new Error('cdn'));document.head.appendChild(s);});
     }
     const r=await Tesseract.recognize(f,'eng');
-    const txt=r.data.text||'';
-    const dm=txt.match(/(\d+[.,]\d+)\s*km/i)||txt.match(/(\d+)\s*km/i);
-    if(dm&&$('#l_dist'))$('#l_dist').value=dm[1].replace('.',',');
-    let time=null;
-    const hms=txt.match(/\b(\d{1,2}):(\d{2}):(\d{2})\b/);
-    if(hms)time=hms[0];
-    else{
-      const all=[...txt.matchAll(/\b(\d{1,2}):(\d{2})\b/g)];
-      for(const m of all){ const after=txt.slice(m.index+m[0].length,m.index+m[0].length+5);
-        if(!/\/\s*km/i.test(after)){time=m[0];break;} }
+    let txt=(r.data.text||'').replace(/\u00a0/g,' ');
+    // 1) retirer la barre d'état (heure + batterie) : on ignore la 1re ligne courte
+    const lines=txt.split('\n');
+    if(lines.length>1&&/^\s*\d{1,2}[:.]\d{2}\b/.test(lines[0])&&lines[0].length<40)lines.shift();
+    txt=lines.join('\n');
+    // 2) neutraliser les heures de publication ("Aujourd'hui à 10:41", "hier a 9.05")
+    txt=txt.replace(/(aujourd\S*hui|hier|today|yesterday|le\s+\d{1,2}\s+\w+)?\s*[àa]\s*\d{1,2}[:.]\d{2}/gi,' ');
+    let dist=null,time=null,pace=null;
+    // 3) distance
+    const dm=txt.match(/(\d+[.,]\d+)\s*k[m]?\b/i)||txt.match(/\b(\d{1,3})[.,]?(\d*)\s*K\b/);
+    if(dm)dist=parseFloat((dm[1]+(dm[2]?'.'+dm[2]:'')).replace(',','.'));
+    // 4) allure (5:46 /km)
+    const pm=txt.match(/(\d{1,2})[:.](\d{2})\s*\/?\s*km/i);
+    if(pm)pace=(+pm[1])*60+(+pm[2]);
+    // 5) durée format Strava : 38min 57s / 1h 05min 12s / 45 min
+    const sm=txt.match(/(?:(\d{1,2})\s*h[a-z]*\s*)?(\d{1,3})\s*m(?:in|n)?[a-z]*\s*(?:(\d{1,2})\s*s)?/i);
+    if(sm&&(sm[1]||sm[3]||+sm[2]>=5))time=(+(sm[1]||0))*3600+(+sm[2])*60+(+(sm[3]||0));
+    // 6) sinon, format à deux-points hors allure
+    if(time==null){
+      const hms=txt.match(/\b(\d{1,2}):([0-5]\d):([0-5]\d)\b/);
+      if(hms)time=(+hms[1])*3600+(+hms[2])*60+(+hms[3]);
+      else{
+        for(const m of txt.matchAll(/\b(\d{1,3}):([0-5]\d)\b/g)){
+          if(/\s*\/?\s*km/i.test(txt.slice(m.index+m[0].length,m.index+m[0].length+6)))continue;
+          time=(+m[1])*60+(+m[2]); break;
+        }
+      }
     }
-    if(time&&$('#l_time'))$('#l_time').value=time;
-    if(st)st.innerHTML=`<div class="hint">${(dm||time)?'✅ Valeurs détectées — vérifie et corrige si besoin.':'⚠️ Rien détecté, saisis les valeurs à la main.'}</div>`;
+    // 7) recoupement allure × distance
+    if(time==null&&pace&&dist)time=Math.round(pace*dist);
+    let warn='';
+    if(dist&&time){
+      const p=time/dist;
+      if(pace&&Math.abs(p-pace)>60){ time=Math.round(pace*dist); }
+      else if(p<120||p>900){ warn='⚠️ Allure incohérente détectée — vérifie le temps.'; }
+    }
+    if(dist&&$('#l_dist'))$('#l_dist').value=String(dist).replace('.',',');
+    if(time&&$('#l_time'))$('#l_time').value=fmtHMS(time);
+    if(st)st.innerHTML=`<div class="hint">${warn||((dist||time)?'✅ Valeurs détectées — vérifie et corrige si besoin.':'⚠️ Rien détecté, saisis les valeurs à la main.')}</div>`;
     $('#l_dist')?.dispatchEvent(new Event('input'));
   }catch(err){
     if(st)st.innerHTML='<div class="hint">⚠️ Lecture impossible (connexion requise la première fois). Saisis à la main.</div>';
