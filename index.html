@@ -52,13 +52,19 @@ button{font-family:inherit;border:none;cursor:pointer}
 .btn.dgr{background:transparent;color:var(--danger);font-weight:600}
 .btn.sm{width:auto;padding:8px 14px;font-size:14px;margin-top:0}
 /* tabbar */
-#tabbar{position:fixed;bottom:0;left:0;right:0;display:flex;background:color-mix(in srgb,var(--card) 88%,transparent);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-top:1px solid var(--line);padding:8px 10px calc(env(safe-area-inset-bottom) + 8px);z-index:50}
+#tabbar{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--card);
+  border-top:1px solid var(--line);
+  padding:8px 10px calc(env(safe-area-inset-bottom) + 8px);z-index:50}
+/* prolonge le fond sous la barre : évite la bande noire dans l'app installée */
+#tabbar::after{content:"";position:absolute;top:100%;left:0;right:0;height:200px;background:var(--card);pointer-events:none}
+html{background:var(--card)}
+body{background:var(--bg);min-height:100vh;min-height:100dvh}
 .tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:3px;background:none;color:var(--sub);
   font-size:10px;font-weight:600;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 1px;min-width:0}
 .tab.on{color:var(--acc)}
 .tab svg{width:25px;height:25px;flex-shrink:0}
-.tab .emo{font-size:21px;line-height:25px;height:25px;display:flex;align-items:center;justify-content:center;filter:grayscale(1);opacity:.5}
-.tab.on .emo{filter:none;opacity:1}
+.tab .emo{font-size:22px;line-height:25px;height:25px;display:flex;align-items:center;justify-content:center;opacity:.55}
+.tab.on .emo{opacity:1}
 #tabbar{padding-left:4px;padding-right:4px}
 /* sheet */
 #sheetWrap{position:fixed;inset:0;z-index:100}
@@ -148,6 +154,9 @@ textarea.f{resize:vertical;min-height:70px}
 .pgrid .ph img{width:100%;height:100%;object-fit:cover;display:block}
 .pgrid .ph span{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(transparent,rgba(0,0,0,.75));color:#fff;font-size:9.5px;font-weight:600;padding:10px 4px 3px;text-align:center}
 .pgrid .ph.sel{outline:3px solid var(--acc);outline-offset:-3px}
+.pgrid .ph.ph-miss{border:1.5px dashed var(--line);display:flex;align-items:center;justify-content:center}
+.pgrid .ph.ph-miss::after{content:"⚠️";font-size:20px;opacity:.65}
+.pgrid .ph.ph-miss img{display:none}
 .cmp{display:flex;gap:8px}
 .cmp>div{flex:1;text-align:center}
 .cmp img{width:100%;border-radius:10px;display:block}
@@ -191,7 +200,7 @@ textarea.f{resize:vertical;min-height:70px}
 .sw{width:46px;height:27px;border-radius:99px;background:var(--chip);position:relative;flex-shrink:0;cursor:pointer}
 .sw i{position:absolute;top:3px;left:3px;width:21px;height:21px;border-radius:50%;background:#fff;transition:.18s}
 .sw.on{background:var(--ok)}.sw.on i{left:22px}
-#restChip{position:fixed;left:16px;right:16px;bottom:calc(env(safe-area-inset-bottom) + 84px);
+#restChip{position:fixed;left:16px;right:16px;bottom:calc(env(safe-area-inset-bottom) + 88px);
   background:var(--card);border-radius:14px;box-shadow:0 6px 20px rgba(0,0,0,.35);
   display:flex;align-items:center;gap:10px;padding:11px 14px;z-index:60;overflow:hidden}
 #restChip .rc-bar{position:absolute;left:0;top:0;bottom:0;background:rgba(255,90,31,.16);transition:width 1s linear}
@@ -1065,8 +1074,10 @@ function renderExos(){
     </div>
     <div class="sec-t">Données</div>
     <div class="card">
-      <button class="btn sec" style="margin-top:0" onclick="exportJSON()">⬇️ Exporter JSON (sauvegarde)</button>
-      <button class="btn sec" onclick="$('#importFile').click()">⬆️ Importer JSON</button>
+      <button class="btn sec" style="margin-top:0" onclick="exportFull()">⬇️ Sauvegarde complète (avec photos)</button>
+      <button class="btn sec" onclick="exportJSON()">⬇️ Sauvegarde légère (sans photos)</button>
+      <button class="btn sec" onclick="$('#importFile').click()">⬆️ Restaurer une sauvegarde</button>
+      <div class="hint">⚠️ Supprimer le raccourci ATLAS de l\u2019écran d\u2019accueil efface les données stockées par iOS. Fais une sauvegarde complète avant, et garde-la dans tes Fichiers ou sur GitHub.</div>
     </div>`;
 }
 
@@ -1893,10 +1904,36 @@ function compressImg(file,max=900,q=.72){
     fr.onerror=rej; fr.readAsDataURL(file);
   });
 }
+let missingPhotos=new Set();
 async function loadPhotoThumbs(){
+  let miss=false;
   for(const el of document.querySelectorAll('img[data-ph]')){
-    try{ const d=await idbGet('photo:'+el.dataset.ph); if(d)el.src=d; }catch(_){}
+    const id=el.dataset.ph;
+    try{ const d=await idbGet('photo:'+id);
+      if(d){ el.src=d; missingPhotos.delete(id); }
+      else { missingPhotos.add(id); miss=true;
+        el.removeAttribute('src');
+        el.parentElement?.classList.add('ph-miss'); }
+    }catch(_){ missingPhotos.add(id); miss=true; el.parentElement?.classList.add('ph-miss'); }
   }
+  if(miss&&tab==='body')showMissBanner();
+}
+function showMissBanner(){
+  if($('#missB'))return;
+  const v=$('#view'); if(!v)return;
+  const d=document.createElement('div');
+  d.id='missB'; d.className='card warn-c';
+  d.innerHTML=`<div class="card-t">⚠️ Images introuvables</div>
+    <div class="empty-s">${missingPhotos.size} image${missingPhotos.size>1?'s ont':' a'} été effacée${missingPhotos.size>1?'s':''} par iOS — cela arrive quand le raccourci est supprimé de l\u2019écran d\u2019accueil. Les fiches sont là, mais les images doivent être réimportées.</div>
+    <button class="btn sec" onclick="cleanMissing()">🧹 Nettoyer les fiches vides</button>`;
+  v.insertBefore(d,v.children[2]);
+}
+async function cleanMissing(){
+  if(!confirm('Supprimer les fiches dont l\u2019image a disparu ?'))return;
+  state.body.photos=state.body.photos.filter(p=>!missingPhotos.has(p.id));
+  state.body.goalPhotos=state.body.goalPhotos.filter(p=>!missingPhotos.has(p.id));
+  missingPhotos.clear();
+  await saveNow(); render(); toast('Fiches nettoyées');
 }
 $('#photoFile').addEventListener('change',async e=>{
   const f=e.target.files[0]; e.target.value=''; if(!f)return;
@@ -2186,17 +2223,34 @@ function icsExport(){
 }
 
 /* ============ EXPORT / IMPORT ============ */
-function exportJSON(){
-  const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
+function exportJSON(){ doExport(false); }
+async function exportFull(){ toast('Préparation…'); await doExport(true); }
+async function doExport(withPhotos){
+  const data={...state};
+  if(withPhotos){
+    const ids=[...state.body.photos.map(p=>p.id),...state.body.goalPhotos.map(p=>p.id)];
+    const imgs={};
+    for(const id of ids){ try{ const d=await idbGet('photo:'+id); if(d)imgs[id]=d; }catch(_){} }
+    data._photos=imgs;
+  }
+  const blob=new Blob([JSON.stringify(data)],{type:'application/json'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
-  a.download=`sport_sauvegarde_${todayISO()}.json`; a.click();
+  a.download=`atlas_${withPhotos?'complet':'donnees'}_${todayISO()}.json`; a.click();
+  const mo=(blob.size/1048576).toFixed(1).replace('.',',');
+  toast(withPhotos?`Sauvegarde complète · ${mo} Mo`:'Sauvegarde exportée');
 }
 $('#importFile').addEventListener('change',e=>{
   const f=e.target.files[0]; if(!f)return;
   const r=new FileReader();
-  r.onload=()=>{ try{ const d=JSON.parse(r.result);
+  r.onload=async()=>{ try{ const d=JSON.parse(r.result);
       if(!d.sports||!d.exos)throw 0;
-      state=d; migrate(); saveNow(); render(); toast('Données importées ✅');
+      const imgs=d._photos||{}; delete d._photos;
+      state=d; migrate();
+      let k=0;
+      for(const id in imgs){ try{ await idbSet('photo:'+id,imgs[id]); k++; }catch(_){} }
+      missingPhotos.clear();
+      await saveNow(); render();
+      toast(k?`Données + ${k} photo${k>1?'s':''} importées ✅`:'Données importées ✅');
     }catch(_){ toast('Fichier invalide'); } };
   r.readAsText(f); e.target.value='';
 });
@@ -2219,6 +2273,10 @@ async function boot(){
   await saveNow();
   try{ localStorage.removeItem(LS_KEY+'_bak'); }catch(_){}
   render();
+  try{ if(navigator.storage&&navigator.storage.persist){
+    const already=await navigator.storage.persisted();
+    if(!already)await navigator.storage.persist();
+  } }catch(_){}
   if(state.settings.notif&&'Notification' in window&&Notification.permission==='granted')scheduleNotifs();
 }
 boot();
