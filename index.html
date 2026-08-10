@@ -201,13 +201,28 @@ textarea.f{resize:vertical;min-height:70px}
 .sw i{position:absolute;top:3px;left:3px;width:21px;height:21px;border-radius:50%;background:#fff;transition:.18s}
 .sw.on{background:var(--ok)}.sw.on i{left:22px}
 #restChip{position:fixed;left:16px;right:16px;bottom:calc(env(safe-area-inset-bottom) + 88px);
-  background:var(--card);border-radius:14px;box-shadow:0 6px 20px rgba(0,0,0,.35);
-  display:flex;align-items:center;gap:10px;padding:11px 14px;z-index:60;overflow:hidden}
-#restChip .rc-bar{position:absolute;left:0;top:0;bottom:0;background:rgba(255,90,31,.16);transition:width 1s linear}
+  background:var(--card);border-radius:14px;box-shadow:0 6px 20px rgba(0,0,0,.45);
+  display:flex;align-items:center;gap:10px;padding:11px 14px;z-index:300;overflow:hidden;
+  border:1.5px solid var(--acc);transition:top .2s}
+body.sheet-open #restChip{bottom:auto;top:calc(env(safe-area-inset-top) + 10px);
+  box-shadow:0 8px 26px rgba(0,0,0,.6)}
+body.rest-on #view{padding-bottom:calc(env(safe-area-inset-bottom) + 160px)}
+#restChip .rc-bar{position:absolute;left:0;top:0;bottom:0;background:rgba(255,90,31,.16);transition:width 1s linear;pointer-events:none}
 #restChip .rc-t{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums;position:relative;flex:1}
 #restChip button{position:relative;background:var(--chip);color:var(--tx);width:34px;height:34px;border-radius:50%;font-size:15px;font-weight:700}
 .hrow{display:flex;gap:8px;margin-bottom:12px}
 .hrow button{flex:1;padding:10px;border-radius:12px;background:var(--chip);color:var(--tx);font-size:13px;font-weight:700}
+.rest-bar{background:var(--card);border-radius:14px;padding:11px 12px;margin-top:12px;box-shadow:var(--sh)}
+.rb-t{font-size:12px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.rb-btns{display:flex;gap:6px}
+.rb-btns button{flex:1;padding:11px 2px;border-radius:11px;background:var(--chip);color:var(--tx);font-size:14px;font-weight:700}
+.rb-btns button.pri{background:var(--acc);color:#fff}
+.rb-btns button.cog{flex:0 0 42px;font-size:15px;color:var(--sub)}
+.lnk{background:none;color:var(--acc);font-size:12.5px;font-weight:700;padding:6px 0 0;margin:0}
+.setrows{margin-top:8px}
+.setrows .sr2{display:flex;align-items:center;gap:7px;margin-bottom:6px}
+.setrows .sr2 .n{font-size:12px;color:var(--sub);font-weight:700;width:22px;flex-shrink:0}
+.setrows .sr2 input{padding:9px;font-size:15px}
 </style>
 </head>
 <body>
@@ -816,7 +831,7 @@ function openSession(type,id,date){
     <div class="sh-t" style="margin:0">${esc(o.label)}</div></div>
     <div class="it-sub" style="margin:4px 0 14px;text-transform:capitalize">${fmtLong(date)}${o.time?' · '+o.time:''}</div>
     ${content}${logHTML}
-    ${tp?`<button class="btn sec" onclick="restPicker()">⏱ Minuteur de repos</button>`:''}
+    ${tp?restBar():''}
     ${!log?`<button class="btn" onclick="openLogForm('${type}','${id}','${date}')">✅ Séance faite — enregistrer</button>`:''}
     ${type==='one'?`<button class="btn dgr" onclick="deleteOneoff('${id}')">Supprimer cette séance</button>`
                   :`<button class="btn dgr" onclick="skipRule('${id}','${date}')">Annuler cette occurrence</button>`}`);
@@ -829,8 +844,11 @@ const FEELS=['😫','😕','🙂','💪','🔥'];
 function logSummary(log){
   let h='';
   if(log.kind==='muscu'){
-    h=log.data.map(d=>{const e=exo(d.exId);return `<div class="rec-row"><span style="font-weight:600">${esc(e?.name||'?')}</span>
-      <span class="t">${esc(d.weight||'—')} · ${esc(d.reps||'—')}</span></div>`;}).join('');
+    h=log.data.map(d=>{const e=exo(d.exId);
+      const det=Array.isArray(d.sets)&&d.sets.length
+        ? `<div class="it-sub" style="margin:-4px 0 6px">${d.sets.map((s,k)=>`S${k+1} ${String(s.w).replace('.',',')}×${s.r}`).join(' · ')}</div>` : '';
+      return `<div class="rec-row"><span style="font-weight:600">${esc(e?.name||'?')}</span>
+      <span class="t">${esc(d.weight||'—')} · ${esc(d.reps||'—')}</span></div>${det}`;}).join('');
   } else {
     const bike=/v[ée]lo|bike|cycl/i.test(sport(log.sportId)?.name||'');
     const p=log.dist&&log.timeSec?(bike?`${(log.dist/(log.timeSec/3600)).toFixed(1).replace('.',',')} km/h`:fmtPace(log.timeSec/log.dist)):'—';
@@ -857,10 +875,12 @@ function openLogForm(type,id,date){
       <div class="exo-l">${exoArt(e,sp?.color||'var(--acc)',42)}
         <div class="grow"><div class="nm">${esc(e?.name||'?')}</div><div class="zz">prévu : ${x.sets} × ${esc(x.reps)}</div>
         <div class="frow" style="margin-top:6px">
-          <div><input class="f" id="lw_${i}" placeholder="Poids (ex 60 kg)" onchange="autoRest()"></div>
+          <div><input class="f" id="lw_${i}" placeholder="Poids max (ex 60 kg)" onchange="autoRest()"></div>
           <div><input class="f" id="lr_${i}" placeholder="Reps (ex 4×8)" onchange="autoRest()"></div>
-        </div></div></div>`;}).join('');
-    body=`<div class="hrow"><button onclick="restStart(state.settings.restDefault)">⏱ Lancer ${state.settings.restDefault}s</button><button onclick="restPicker()">Réglages</button></div>`+body;
+        </div>
+        <button class="lnk" onclick="detailSets(${i},'${x.exId}',${x.sets})">＋ détailler série par série</button>
+        <div id="ld_${i}" class="setrows"></div></div></div>`;}).join('');
+    body=restBar()+body;
   } else {
     const prev=lastCardioLog(o.sportId);
     body=`${prev?`<div class="loghead">Dernière sortie : <b>${prev.dist} km</b> en <b>${fmtHMS(prev.timeSec)}</b> (${fmtPace(prev.timeSec/prev.dist)})</div>`:''}
@@ -882,6 +902,26 @@ function openLogForm(type,id,date){
     $('#paceHint').textContent=(d&&t)?`Allure : ${fmtPace(t/d)}`:''; };
     dEl.addEventListener('input',upd); tEl.addEventListener('input',upd); }
 }
+function detailSets(i,exId,ns){
+  const box=$('#ld_'+i); if(!box)return;
+  if(box.dataset.on==='1'){ box.innerHTML=''; box.dataset.on='0'; return; }
+  box.dataset.on='1';
+  const w=$('#lw_'+i).value.trim();
+  box.innerHTML=Array.from({length:ns},(_,k)=>`<div class="sr2"><span class="n">S${k+1}</span>
+    <input class="f" id="lsw_${i}_${k}" inputmode="decimal" placeholder="kg" value="${k===0?esc(w.replace(/[^0-9.,]/g,'')):''}">
+    <input class="f" id="lsr_${i}_${k}" inputmode="numeric" placeholder="reps"></div>`).join('')
+    +`<div class="hint" style="margin-top:2px">Laisse vide ce que tu ne veux pas détailler — le poids max sera utilisé.</div>`;
+}
+function readSets(i,ns){
+  const out=[];
+  for(let k=0;k<ns;k++){
+    const we=$(`#lsw_${i}_${k}`), re=$(`#lsr_${i}_${k}`);
+    if(!we||!re)return null;
+    const w=parseFloat((we.value||'').replace(',','.')), r=parseInt(re.value||'',10);
+    if(w&&r)out.push({w,r});
+  }
+  return out.length?out:null;
+}
 function autoRest(){ if(state.settings.restAuto&&!rest.t)restStart(state.settings.restDefault); }
 function setFeel(i){ logCtx.feel=i; FEELS.forEach((_,k)=>$('#feel_'+k).classList.toggle('on',k===i)); }
 function lastCardioLog(sportId){
@@ -892,7 +932,14 @@ function saveLog(){
   const c=logCtx; if(!c)return;
   const log={id:uid(),refType:c.type,refId:c.id,date:c.date,sportId:c.sportId,kind:c.kind,feel:c.feel,note:$('#l_note').value.trim()};
   if(c.kind==='muscu'){
-    log.data=c.tp.exos.map((x,i)=>({exId:x.exId,weight:$('#lw_'+i).value.trim(),reps:$('#lr_'+i).value.trim()}));
+    log.data=c.tp.exos.map((x,i)=>{
+      const d={exId:x.exId,weight:$('#lw_'+i).value.trim(),reps:$('#lr_'+i).value.trim()};
+      const s=readSets(i,x.sets);
+      if(s){ d.sets=s;
+        if(!d.weight)d.weight=Math.max(...s.map(o=>o.w))+' kg';
+        if(!d.reps)d.reps=s.map(o=>o.r).join(',');
+      }
+      return d;});
   } else {
     log.dist=parseFloat(($('#l_dist').value||'').replace(',','.'))||null;
     log.timeSec=parseHMS($('#l_time').value)||null;
@@ -1259,10 +1306,21 @@ function logVolume(l){
   if(l.kind!=='muscu')return 0;
   let v=0;
   l.data.forEach(d=>{
+    if(Array.isArray(d.sets)&&d.sets.length){ d.sets.forEach(s=>{v+=s.w*s.r;}); return; }
     const w=parseWeight(d.weight,l.date), r=parseReps(d.reps,plannedSets(l,d.exId));
     if(w&&r)v+=w*r.total;
   });
   return v;
+}
+function volExact(days){
+  const from=iso(addD(new Date(),-days+1));
+  const ls=state.logs.filter(l=>l.kind==='muscu'&&l.date>=from);
+  let tot=0,det=0;
+  ls.forEach(l=>l.data.forEach(d=>{
+    const filled=Array.isArray(d.sets)&&d.sets.length;
+    if(!filled&&!String(d.weight||'').trim())return;   // exercice non rempli : ignoré
+    tot++; if(filled)det++; }));
+  return tot?det/tot:0;
 }
 const kfmt=v=>v>=1000?(v/1000).toFixed(v>=10000?0:1).replace('.',',')+' t':Math.round(v)+' kg';
 function logsIn(days){
@@ -1337,12 +1395,13 @@ function statsMuscu(){
   const tot=logs.reduce((a,l)=>a+logVolume(l),0);
   const cur=weeks[weeks.length-1], prev=weeks[weeks.length-2]||0;
   const dv=prev?Math.round((cur-prev)/prev*100):null;
-  const volume=`<div class="card"><div class="card-t">🏋️ Volume soulevé</div>
+  const exact=volExact(statPeriod);
+  const volume=`<div class="card"><div class="card-t">🏋️ Volume soulevé ${exact<0.95?'· estimé':''}</div>
     <div class="bigv">${kfmt(tot)}</div>
     <div class="it-sub">sur ${statPeriod>=3650?'toute la période':statPeriod+' jours'} · ${logs.length} séance${logs.length>1?'s':''}</div>
     ${dv!==null?`<div class="delta" style="color:${dv>=0?'var(--ok)':'var(--warn)'};margin-top:4px">${dv>=0?'+':''}${dv} % cette semaine vs la précédente</div>`:''}
     ${barChart(weeks,wl)}
-    <div class="hint">Volume = poids × répétitions totales, cumulé sur tous les exercices.</div></div>`;
+    <div class="hint">Volume = poids × répétitions, cumulé sur tous les exercices.${exact<0.95?` Calculé à partir de ton poids max par exercice : si tu baisses la charge en fin de séance, le total réel est un peu inférieur. La <b>tendance</b> reste fiable.`:' Calculé série par série — chiffre exact.'}</div></div>`;
 
   /* Répartition PPL */
   const cnt={push:0,pull:0,legs:0,autre:0};
@@ -2136,7 +2195,8 @@ function restDone(){ clearInterval(rest.t); rest.t=null; rest.left=0; restPaint(
   vib([120,80,120,80,220]); beep(); toast('⏱ Repos terminé — go !'); }
 function restPaint(){
   let el=$('#restChip');
-  if(!rest.t&&!rest.left){ if(el)el.remove(); return; }
+  if(!rest.t&&!rest.left){ if(el)el.remove(); document.body.classList.remove('rest-on'); return; }
+  document.body.classList.add('rest-on');
   if(!el){ el=document.createElement('div'); el.id='restChip'; document.body.appendChild(el); }
   const pct=rest.total?(rest.left/rest.total*100):0;
   el.innerHTML=`<div class="rc-bar" style="width:${pct}%"></div>
@@ -2151,13 +2211,19 @@ function beep(){ try{
   g.gain.setValueAtTime(.18,ctx.currentTime); g.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.6);
   o.start(); o.stop(ctx.currentTime+.6);
 }catch(_){}}
+function restBar(){
+  const d=state.settings.restDefault;
+  const opts=[...new Set([60,90,120,180,d])].sort((a,b)=>a-b);
+  return `<div class="rest-bar">
+    <div class="rb-t">⏱ Repos</div>
+    <div class="rb-btns">
+      ${opts.map(s=>`<button class="${s===d?'pri':''}" onclick="restStart(${s})">${Math.floor(s/60)}:${D2(s%60)}</button>`).join('')}
+      <button class="cog" onclick="restPicker()">⚙︎</button>
+    </div></div>`;
+}
 function restPicker(){
   const d=state.settings.restDefault;
-  openSheet(`<div class="sh-t">⏱ Minuteur de repos</div>
-    <div class="frow" style="flex-wrap:wrap;gap:8px">
-      ${[45,60,90,120,180,240].map(s=>`<button class="btn sec" style="flex:0 0 30%;margin-top:0"
-        onclick="closeSheet();restStart(${s})">${s<60?s+' s':(s/60)+' min'}</button>`).join('')}
-    </div>
+  openSheet(`<div class="sh-t">⏱ Réglages du minuteur</div>
     <label class="f">Durée par défaut (secondes)</label>
     <input class="f" id="rs_def" type="number" value="${d}">
     <label class="f">Démarrage automatique après chaque série cochée</label>
@@ -2256,8 +2322,9 @@ $('#importFile').addEventListener('change',e=>{
 });
 
 /* ============ SHEET ============ */
-function openSheet(html){ $('#sheet').innerHTML=`<div class="grab"></div>${html}`; $('#sheetWrap').classList.remove('hidden'); }
-function closeSheet(){ $('#sheetWrap').classList.add('hidden'); logCtx=null; }
+function openSheet(html){ $('#sheet').innerHTML=`<div class="grab"></div>${html}`;
+  $('#sheetWrap').classList.remove('hidden'); document.body.classList.add('sheet-open'); }
+function closeSheet(){ $('#sheetWrap').classList.add('hidden'); document.body.classList.remove('sheet-open'); logCtx=null; }
 
 /* ============ DÉMARRAGE ============ */
 async function boot(){
