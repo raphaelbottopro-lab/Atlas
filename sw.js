@@ -28,6 +28,8 @@ self.addEventListener('fetch', e => {
 
   const url = new URL(req.url);
   if (url.origin !== location.origin) return;   // CDN (Tesseract) : réseau direct
+  // Vérification manuelle de version : on ne sert JAMAIS le cache
+  if (url.searchParams.has('_atlas')) return;
 
   e.respondWith((async () => {
     const cache = await caches.open(CACHE);
