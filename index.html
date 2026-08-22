@@ -148,6 +148,20 @@ textarea.f{resize:vertical;min-height:70px}
   z-index:280;pointer-events:none;display:flex;align-items:center;gap:6px;box-shadow:var(--sh)}
 #offB.hidden{display:none}
 #offB i{width:7px;height:7px;border-radius:50%;background:var(--warn);display:block}
+.stat-ok{display:flex;align-items:center;gap:8px;background:rgba(29,158,117,.14);color:var(--ok);
+  border-radius:11px;padding:9px 12px;font-size:13px;font-weight:700;margin-bottom:12px}
+.stat-ko{display:flex;align-items:center;gap:8px;background:rgba(239,159,39,.14);color:var(--warn);
+  border-radius:11px;padding:9px 12px;font-size:13px;font-weight:700;margin-bottom:12px}
+.stat-ok .sub2,.stat-ko .sub2{margin-left:auto;font-weight:600;opacity:.85;font-size:12px}
+.wk{display:flex;gap:5px;margin-top:12px;align-items:flex-end}
+.wk>div{flex:1;text-align:center}
+.wk .bar{height:46px;display:flex;align-items:flex-end;justify-content:center}
+.wk .bar i{width:100%;border-radius:4px;display:block;background:#7C5CFF;min-height:3px}
+.wk .bar i.miss{background:transparent;border:1.5px dashed var(--line);height:100%;border-radius:5px}
+.wk .d2{font-size:10px;color:var(--sub);font-weight:700;margin-top:5px}
+.wk .h2{font-size:9.5px;color:var(--sub);margin-top:1px;font-variant-numeric:tabular-nums}
+.wk>div.today .d2{color:var(--acc)}
+.mday .moon{font-size:8px;line-height:1;margin-top:1px}
 #updB b{margin-left:auto;text-decoration:underline}
 body.sheet-open #updB{display:none}
 .ocr-load{display:flex;align-items:center;gap:10px;color:var(--sub);font-size:14px;padding:8px 0}
@@ -156,9 +170,9 @@ body.sheet-open #updB{display:none}
 .hint{font-size:13px;color:var(--sub);margin-top:8px;line-height:1.4}
 
 .kpi{display:flex;gap:8px;margin-bottom:14px}
-.kpi>div{flex:1;background:var(--card);border-radius:14px;box-shadow:var(--sh);padding:11px 10px;text-align:center;cursor:pointer}
-.kpi .k{font-size:10px;color:var(--sub);font-weight:700;text-transform:uppercase;letter-spacing:.05em}
-.kpi .v{font-size:19px;font-weight:800;letter-spacing:-.02em;margin-top:3px;font-variant-numeric:tabular-nums}
+.kpi>div{flex:1;min-width:0;background:var(--card);border-radius:14px;box-shadow:var(--sh);padding:11px 6px;text-align:center;cursor:pointer}
+.kpi .k{font-size:9px;color:var(--sub);font-weight:700;text-transform:uppercase;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi .v{font-size:17px;font-weight:800;letter-spacing:-.03em;margin-top:3px;font-variant-numeric:tabular-nums;white-space:nowrap}
 .kpi .u{font-size:11px;color:var(--sub)}
 .gauge{height:8px;background:var(--chip);border-radius:4px;overflow:hidden;margin-top:8px}
 .gauge i{display:block;height:8px;border-radius:4px;background:var(--acc);transition:width .4s}
@@ -644,10 +658,16 @@ function cGoal(){
     <div class="hint">Allure cible ${fmtPace(g.runTime/g.runDist)}</div></div>`;
 }
 function cSleep(){
-  const a=sleepAvg(7), t=state.body.sleep.find(x=>x.date===todayISO());
+  const a=sleepAvg(7), t=sleepOf(todayISO()), ln=lastSleep(), stk=sleepStreak();
+  const banner=t
+    ? `<div class="stat-ok">✓ Nuit enregistrée<span class="sub2">${t.bed}→${t.wake}</span></div>`
+    : `<div class="stat-ko">○ Nuit non enregistrée<span class="sub2">toucher pour ajouter</span></div>`;
   return `<div class="card" onclick="addSleep()" style="cursor:pointer"><div class="card-t">😴 Sommeil</div>
-    <div class="bigv">${t?`${Math.floor(t.h)} h ${D2(Math.round((t.h%1)*60))}`:'—'}</div>
-    <div class="it-sub">${a?`Moyenne 7 jours : ${Math.floor(a)} h ${D2(Math.round((a%1)*60))}`:'Touche pour enregistrer ta nuit'}</div>
+    ${banner}
+    <div class="bigv">${ln?fmtH(ln.h):'—'}</div>
+    <div class="it-sub">${ln?(ln.date===todayISO()?'cette nuit':'nuit du '+fmtShort(ln.date)):'Touche pour enregistrer ta nuit'}${a?` · moyenne 7 j ${fmtH(a)}`:''}</div>
+    ${stk>1?`<div class="delta" style="color:var(--ok);margin-top:4px">🔥 ${stk} nuits d\u2019affilée</div>`:''}
+    ${sleepWeekHTML()}
     ${a&&a<7?`<div class="hint" style="color:var(--acc)">En prise de masse, viser 7 à 8 h aide autant que l'entraînement.</div>`:''}</div>`;
 }
 function cFeel(){
@@ -703,12 +723,16 @@ function dashToggle(id){
 function bodyKPI(){
   const w=lastW(), t=targets(), nt=nutriToday();
   const day=state.body.suppLog[todayISO()]||[], ns=state.body.supps.length;
+  const sn=sleepOf(todayISO());
   return `<div class="kpi">
     <div onclick="go('body')"><div class="k">Poids</div>
       <div class="v">${w?String(w.kg).replace('.',','):'—'}</div><div class="u">kg</div></div>
     <div onclick="go('body')"><div class="k">Protéines</div>
       <div class="v">${nt.prot}</div><div class="u">${t?'/ '+t.prot+' g':'g'}</div></div>
-    <div onclick="go('body')"><div class="k">Compléments</div>
+    <div onclick="addSleep()"><div class="k">Sommeil</div>
+      <div class="v" style="color:${sn?'var(--ok)':'var(--warn)'}">${sn?fmtH(sn.h).replace(' h ','h').replace(/h00$/,'h'):'○'}</div>
+      <div class="u">${sn?'✓ noté':'à noter'}</div></div>
+    <div onclick="go('body')"><div class="k">Complém.</div>
       <div class="v">${ns?day.length+'/'+ns:'—'}</div><div class="u">${ns?'pris':'à régler'}</div></div>
   </div>`;
 }
@@ -792,8 +816,10 @@ function sessLine(o){
 function weekHTML(){
   const m=monday(calAnchor); let h='';
   for(let i=0;i<7;i++){ const d=addD(m,i),s=iso(d),list=sessionsForDate(s);
+    const sn=sleepOf(s);
     h+=`<div class="wday ${s===todayISO()?'today':''}">
       <div class="wday-h"><span class="dn">${DAYS[i]}</span><span class="dd">${d.getDate()} ${MSHORT[d.getMonth()]}</span>
+      ${sn?`<span class="badge" title="Nuit enregistrée">😴 ${fmtH(sn.h)}</span>`:''}
       <span style="margin-left:auto"><button class="btn sec sm" onclick="addSessionForm('${s}')">＋</button></span></div>
       ${list.length?list.map(sessLine).join(''):'<div class="empty">Repos</div>'}</div>`;
   }
@@ -806,7 +832,8 @@ function monthHTML(){
   for(let i=0;i<42;i++){ const d=addD(start,i); if(i>=35&&d.getMonth()!==mo)break;
     const s=iso(d),list=sessionsForDate(s),out=d.getMonth()!==mo;
     const dots=list.slice(0,3).map(o=>`<i style="background:${sport(o.sportId)?.color||'#999'}"></i>`).join('');
-    h+=`<div class="mday ${out?'out':''} ${s===todayISO()?'tod':''}" onclick="openDay('${s}')">${d.getDate()}<span class="mdots">${dots}</span></div>`;
+    const sn=sleepOf(s);
+    h+=`<div class="mday ${out?'out':''} ${s===todayISO()?'tod':''}" onclick="openDay('${s}')">${d.getDate()}<span class="mdots">${dots}</span>${sn?'<span class="moon">😴</span>':''}</div>`;
   }
   return h+'</div>';
 }
@@ -1492,6 +1519,25 @@ let statExo=null;
 
 /* ============ RÉCUPÉRATION, SÉRIE, BADGES ============ */
 /* --- Sommeil --- */
+const sleepOf=d=>state.body.sleep.find(x=>x.date===d)||null;
+const fmtH=h=>`${Math.floor(h)} h ${D2(Math.round((h%1)*60))}`;
+function lastSleep(){ return state.body.sleep.slice().sort((a,b)=>b.date.localeCompare(a.date))[0]||null; }
+function sleepStreak(){
+  let n=0;
+  for(let i=0;i<400;i++){ const d=iso(addD(new Date(),-i));
+    if(sleepOf(d))n++; else if(i===0)continue; else break; }
+  return n;
+}
+function sleepWeekHTML(){
+  const mx=Math.max(...state.body.sleep.slice(-30).map(x=>x.h),9);
+  let h='<div class="wk">';
+  for(let i=6;i>=0;i--){
+    const d=addD(new Date(),-i), s=iso(d), e=sleepOf(s), t=s===todayISO();
+    h+=`<div class="${t?'today':''}"><div class="bar">${e?`<i style="height:${Math.max(12,e.h/mx*100)}%"></i>`:'<i class="miss"></i>'}</div>
+      <div class="d2">${DSHORT[dow(d)]}</div><div class="h2">${e?e.h.toFixed(1).replace('.',','):'—'}</div></div>`;
+  }
+  return h+'</div>';
+}
 function sleepAvg(days=7){
   const from=iso(addD(new Date(),-days+1));
   const s=state.body.sleep.filter(x=>x.date>=from);
@@ -1869,15 +1915,21 @@ function renderBody(){
     ${last?`<div class="hint">Dernière prise : ${fmtLong(last.date)}</div>`:''}
     <button class="btn sec" onclick="addMeasure()">＋ Nouvelle prise de mesures</button></div>`;
 
-  const sl=state.body.sleep.slice().sort((a,b)=>a.date.localeCompare(b.date));
+  const sl=state.body.sleep;
   const a7=sleepAvg(7), a28=sleepAvg(28);
+  const tn=sleepOf(todayISO()), ln=lastSleep(), stk=sleepStreak();
+  const banner=tn
+    ? `<div class="stat-ok">✓ Nuit d\u2019aujourd\u2019hui enregistrée<span class="sub2">${tn.bed}→${tn.wake}</span></div>`
+    : `<div class="stat-ko">○ Nuit d\u2019aujourd\u2019hui non enregistrée${ln?`<span class="sub2">dernière : ${fmtShort(ln.date)}</span>`:''}</div>`;
   const sommeil=`<div class="card"><div class="card-t">😴 Sommeil</div>
-    ${sl.length?`<div class="bigv">${a7?`${Math.floor(a7)} h ${D2(Math.round((a7%1)*60))}`:'—'}</div>
-      <div class="it-sub">moyenne sur 7 jours${a28?` · ${Math.floor(a28)} h ${D2(Math.round((a28%1)*60))} sur 4 semaines`:''}</div>
-      ${sparkline(sl.slice(-20).map(x=>x.h),100,30,'#7C5CFF')}
+    ${sl.length?`${banner}
+      <div class="bigv">${ln?fmtH(ln.h):'—'}</div>
+      <div class="it-sub">${ln?(ln.date===todayISO()?'cette nuit':'nuit du '+fmtShort(ln.date)):''}${a7?` · moyenne 7 j ${fmtH(a7)}`:''}${a28?` · 4 sem. ${fmtH(a28)}`:''}</div>
+      ${stk>1?`<div class="delta" style="color:var(--ok);margin-top:4px">🔥 ${stk} nuits enregistrées d\u2019affilée</div>`:''}
+      ${sleepWeekHTML()}
       ${a7&&a7<7?`<div class="hint" style="color:var(--acc)">Sous 7 h, la récupération et la prise de masse sont freinées. C'est le levier le plus rentable à ton rythme actuel.</div>`:''}`
-     :`<div class="it-sub">Enregistre tes nuits pour suivre la moyenne.</div>`}
-    <button class="btn" onclick="addSleep()">＋ Enregistrer une nuit</button></div>`;
+     :`${banner}<div class="it-sub">Enregistre tes nuits pour suivre la moyenne et ta régularité.</div>`}
+    <button class="btn ${tn?'sec':''}" onclick="addSleep()">${tn?'Modifier la nuit d\u2019aujourd\u2019hui':'＋ Enregistrer une nuit'}</button></div>`;
   const gp=state.body.goalPhotos;
   const objectif=`<div class="card"><div class="card-t">🎯 Objectif physique</div>
     ${gp.length?`<div class="pgrid">${gp.map(p=>`<div class="ph" onclick="openGoalPhoto('${p.id}')">
